@@ -138,6 +138,7 @@ section+section{border-top:1px solid var(--l12)}
 
 /* guests */
 .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.two.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .gbtn{height:58px;background:none;border:1px solid var(--l30);border-radius:2px;font-family:var(--song);font-size:17px;letter-spacing:.14em;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.3}
 .gbtn small{font-family:var(--hei);font-size:11px;color:var(--dim);letter-spacing:.08em}
 .gbtn[aria-pressed="true"]{background:var(--on);border-color:var(--on);color:var(--ink)}
@@ -338,9 +339,10 @@ ol.list li::before{content:counter(i);font-family:var(--song);color:var(--dim);w
 
   <section id="s-guests" class="rv">
     <div class="sh"><span class="n">二</span><h3>人數</h3><span class="r">不接待 15 歲以下孩童</span></div>
-    <div class="two">
+    <div class="two three">
       <button class="gbtn" data-g="2" aria-pressed="false">2 人<small>兩人小住</small></button>
-      <button class="gbtn" data-g="4" aria-pressed="true">3–4 人<small>家人好友</small></button>
+      <button class="gbtn" data-g="3" aria-pressed="false">3 人<small>家人好友</small></button>
+      <button class="gbtn" data-g="4" aria-pressed="true">4 人<small>家人好友</small></button>
     </div>
   </section>
 
@@ -536,7 +538,7 @@ ol.list li::before{content:counter(i);font-family:var(--song);color:var(--dim);w
   /* ===== 串接 Apps Script：部署後把網頁應用程式網址貼在這裡；留空＝示意模式 ===== */
   var API='https://script.google.com/macros/s/AKfycbwftZ3APpq-Isi5VhRHeAFtUY90OQ6DyNjiP-GGWTKUqV5n0AWDxVlJQ5I5CYgpyqMRjw/exec';
   var LIVE=!!API;
-  var PRICE={wd:{2:6800,4:9800},hd:{2:9800,4:11000},cny:{2:13000,4:13000}}, DISCOUNT=1600, DEPOSIT=3000, MAXN=2;
+  var PRICE={wd:{2:6800,3:9800,4:9800},hd:{2:9800,3:11000,4:11000},cny:{2:13000,3:13000,4:13000}}, DISCOUNT=1600, DEPOSIT=3000, MAXN=2;
   var HOLIDAYS={'2027-01-01':1,'2027-02-28':1,'2027-03-01':1}, CNY={};
   var orderId='';
   var FULL=LIVE?{}:{'2026-11-14':1,'2026-11-15':1,'2026-11-21':1,'2026-11-28':1,'2026-12-05':1,'2026-12-06':1,'2026-12-12':1,'2026-12-13':1,'2026-12-25':1,'2026-12-26':1,'2026-12-31':1,'2027-01-01':1,'2027-01-09':1,'2027-01-16':1};
@@ -579,7 +581,7 @@ ol.list li::before{content:counter(i);font-family:var(--song);color:var(--dim);w
   function money(n){return 'NT$'+n.toLocaleString('en-US');}
   function kk(n){return n%1000===0?(n/1000)+'k':(n/1000).toFixed(1)+'k';}
   function same(a,b){return a&&b&&a.getTime()===b.getTime();}
-  function gl(){return state.g===2?'2 人':'3–4 人';}
+  function gl(){return state.g+' 人';}
 
   function renderCal(){
     var v=state.view,y=v.getFullYear(),m=v.getMonth();
