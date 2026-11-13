@@ -538,6 +538,22 @@ ol.list li::before{content:counter(i);font-family:var(--song);color:var(--dim);w
   /* ===== 串接 Apps Script：部署後把網頁應用程式網址貼在這裡；留空＝示意模式 ===== */
   var API='https://script.google.com/macros/s/AKfycbwftZ3APpq-Isi5VhRHeAFtUY90OQ6DyNjiP-GGWTKUqV5n0AWDxVlJQ5I5CYgpyqMRjw/exec';
   var LIVE=!!API;
+  /* ===== LINE 登入（LIFF）：在 LINE Developers 建好 LIFF 後把 LIFF ID 貼在這裡；留空＝不用 LINE 登入 ===== */
+  var LIFF_ID='2012605063-00Ri8uB2';
+  var OA_ID='@157ixczg';
+  var lineUser={id:'',name:''}, inLine=false;
+  function initLiff(){
+    if(!LIFF_ID)return;
+    var sc=document.createElement('script');sc.src='https://static.line-scdn.net/liff/edge/2/sdk.js';
+    sc.onload=function(){
+      liff.init({liffId:LIFF_ID}).then(function(){
+        inLine=liff.isInClient();
+        if(inLine||liff.isLoggedIn())return liff.getProfile().then(function(pr){lineUser={id:pr.userId,name:pr.displayName};});
+      }).catch(function(e){console.warn('LIFF',e);});
+    };
+    document.head.appendChild(sc);
+  }
+  initLiff();
   var PRICE={wd:{2:6800,3:9800,4:9800},hd:{2:9800,3:11000,4:11000},cny:{2:13000,3:13000,4:13000}}, DISCOUNT=1600, DEPOSIT=3000, MAXN=2;
   var HOLIDAYS={'2027-01-01':1,'2027-02-28':1,'2027-03-01':1}, CNY={};
   var orderId='';
@@ -692,7 +708,7 @@ ol.list li::before{content:counter(i);font-family:var(--song);color:var(--dim);w
     }
     var btn=$('submit'),old=btn.textContent;btn.disabled=true;btn.textContent='確認空房中…';
     api('POST',{action:'hold',orderId:(exp>Date.now()?orderId:''),name:$('name').value.trim(),tel:$('tel').value.replace(/\D/g,''),email:$('email').value.trim(),
-      guests:state.g,in:key(state.inD),out:key(state.outD),trans:trans,cars:cars,note:$('note').value.trim()})
+      guests:state.g,in:key(state.inD),out:key(state.outD),trans:trans,cars:cars,note:$('note').value.trim(),lineId:lineUser.id,lineName:lineUser.name})
     .then(function(r){
       btn.disabled=false;btn.textContent=old;
       if(!r.ok){
@@ -719,16 +735,30 @@ ol.list li::before{content:counter(i);font-family:var(--song);color:var(--dim);w
       api('POST',{action:'paid',orderId:orderId,tel:$('tel').value.replace(/\D/g,''),five:f}).then(function(r){
         pb.disabled=false;pb.textContent='匯款完成';
         if(!r.ok){$('f-five').classList.add('err');$('f-five').querySelector('.msg').textContent=r.error||'送出失敗，請再試一次';return;}
+        var msg='我已完成匯款，帳號後五碼 '+f;
+        if(inLine&&window.liff){                /* 在 LINE 裡：替客人送出這句，關掉網頁回到聊天室 */
+          liff.sendMessages([{type:'text',text:msg}]).catch(function(){}).then(function(){clearMem();liff.closeWindow();});
+          return;
+        }
         pb.dataset.ok='1';pb.click();delete pb.dataset.ok;
+        /* 一般瀏覽器：給一顆「回到 LINE」按鈕，打開老石人聊天室並帶好這句話 */
+        var lk=document.getElementById('backLine');
+        if(!lk){lk=document.createElement('a');lk.id='backLine';lk.className='submit';lk.style.cssText='display:block;text-align:center;text-decoration:none;margin-top:12px';lk.textContent='回到 LINE 告訴老石人';document.getElementById('lb').after(lk);}
+        lk.href='https://line.me/R/oaMessage/'+encodeURIComponent(OA_ID)+'/?'+encodeURIComponent(msg);
       }).catch(function(){pb.disabled=false;pb.textContent='匯款完成';$('f-five').querySelector('.msg').textContent='網路不穩，請再按一次';$('f-five').classList.add('err');});
       return;
     }
     stage='done';clearMem();clearInterval(tick);
     var c=calc(),nm=$('name').value.trim();
     $('lb').innerHTML='';
+    if(LIVE){
+      tag('匯款資料已送出');
+      bub('oa','謝謝您，我們收到帳號後五碼 '+f+' 了，核對後會再通知您。\n請按下方按鈕回到老石人 LINE，把這句話傳給我們，之後的訂房成功通知才收得到。');
+    } else {
     tag('網頁關閉，回到 LINE');
     bub('me','我已完成匯款，帳號後五碼 '+f);
     bub('oa','收到，請稍等我們核對款項，確認預約成功後會再通知您。');
+    }
     $('mail').innerHTML='<b>寄到 oldstone.ofc@gmail.com</b><br>主旨：新訂單待核對｜'+nm+' '+mdS(state.inD)+' 入住<br>後五碼 '+f+'・訂金 '+money(c.dep)+'・電話 '+$('tel').value;
     $('ownMsg').innerHTML='<b>主人私人 LINE：</b><br>'+nm+'｜'+md(state.inD)+'–'+md(state.outD)+'｜'+gl()+'<br>訂金 '+money(c.dep)+'｜帳號後五碼 <b>'+f+'</b><br>請到網銀確認是否入帳';
     $('okB').disabled=false;$('noB').disabled=false;
