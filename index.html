@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>老石人訂房（測試）</title>
+<title>老石人訂房</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chiron+Hei+HK:wght@300;400;500&family=Chiron+Sung+HK:wght@400;600&family=LXGW+WenKai+TC&display=swap" rel="stylesheet">
@@ -369,7 +369,7 @@ details.mini ul{margin:0;padding-left:1.2em}
     </div>
     <div class="grid" id="grid"></div>
     <div class="legend" id="legend"></div>
-    <div class="hint" id="hint">先點入住日，再點退房日</div>
+    <div class="hint" id="hint">點選要入住的晚上，住兩晚就再點隔天</div>
     <div class="sum" id="sum"></div>
   </section>
 
@@ -668,29 +668,33 @@ details.mini ul{margin:0;padding-left:1.2em}
     for(var i=0;i<first;i++)h+='<div class="d empty"></div>';
     for(var d=1;d<=days;d++){
       var dt=new Date(y,m,d),k=key(dt),cls='d',p=kk(nightPrice(dt)),label=(m+1)+'月'+d+'日';
-      var past=dt<today,full=isFull(k),soon=!past&&dt<FIRST,closed=dt>LAST,isOut=closed&&state.inD&&!state.outD&&diff(state.inD,dt)>=1&&diff(state.inD,dt)<=MAXN&&add(dt,-1)<=LAST;
-      if(past){cls+=' past';p='';}else if(soon){cls+=' past';p='請私訊';label+=' 請私訊老石人 LINE';}else if(closed&&!isOut&&!same(dt,state.outD)){cls+=' past';p='未開放';label+=' 尚未開放';}else if(full){cls+=' full';p='滿';}else if(mine(k)&&!state.outD){p='保留中';}
-      if(same(dt,state.inD)){cls+=' sel';label+=' 入住';if(!state.outD)p='入住';}
-      else if(same(dt,state.outD)){cls+=' sel';p='退房';label+=' 退房';}
-      else if(state.inD&&state.outD&&dt>state.inD&&dt<state.outD)cls+=' mid';
+      var past=dt<today,full=isFull(k),soon=!past&&dt<FIRST,closed=dt>LAST,inSel=!!(state.inD&&state.outD&&dt>=state.inD&&dt<state.outD);
+      if(past){cls+=' past';p='';}else if(soon){cls+=' past';p='請私訊';label+=' 請私訊老石人 LINE';}else if(closed){cls+=' past';p='未開放';label+=' 尚未開放';}else if(full){cls+=' full';p='滿';}else if(mine(k)&&!inSel){p='保留中';}
+      if(inSel){cls+=' sel';label+=' 已選這晚';}
       h+='<button class="'+cls+'" data-k="'+k+'" aria-label="'+label+(full?' 已滿':'')+'"'+(past?' disabled':'')+'><span class="n">'+d+'</span><span class="p">'+p+'</span></button>';
     }
     $('grid').innerHTML=h;
     $('legend').textContent='格子裡是 '+gl()+'每晚房價。週五、六、日晚為假日價，劃線為已滿。目前開放到 '+(LAST.getMonth()+1)+'/'+LAST.getDate()+' 入住，'+(OPEN.next.getMonth()+1)+'/'+OPEN.next.getDate()+' 會再開放下一季。今天和明天的日期請直接私訊老石人 LINE。';
   }
+  /* 點「晚上」：點一格＝住這一晚；再點隔天（或前一天）變兩晚；點已選的晚上＝取消那晚；點其他日期＝從那晚重新選 */
+  function okNight(d){return d>=FIRST&&d<=LAST&&!isFull(key(d));}
   function pick(dt){
-    var full=isFull(key(dt));
-    if(dt<FIRST){$('hint').textContent='今天和明天入住不開放網路預約，請直接私訊老石人 LINE，主人會親自回覆您';return;}
-    var asOut=state.inD&&!state.outD&&dt>state.inD&&diff(state.inD,dt)<=MAXN&&add(dt,-1)<=LAST;
-    if(dt>LAST&&!asOut){$('hint').textContent=md(dt)+'還沒開放預約，'+(OPEN.next.getMonth()+1)+'/'+(OPEN.next.getDate())+' 起會開放下一季的日期';return;}
-    if(state.inD&&!state.outD&&dt>state.inD){
-      var n=diff(state.inD,dt),ok=n<=MAXN;
-      for(var i=1;i<n&&ok;i++)if(isFull(key(add(state.inD,i))))ok=false;
-      if(ok){state.outD=dt;$('hint').textContent='住 '+n+' 晚。想改日期，再點一次入住日';update();return;}
-      if(n>MAXN&&!full){state.inD=dt;state.outD=null;$('hint').textContent='這裡最多選 2 晚，更長的住宿請私訊主人。已改成這天入住，請點退房日';update();return;}
+    var H=$('hint');
+    if(dt<FIRST){H.textContent='今天和明天入住不開放網路預約，請直接私訊老石人 LINE，主人會親自回覆您';return;}
+    if(dt>LAST){H.textContent=md(dt)+'還沒開放預約，'+(OPEN.next.getMonth()+1)+'/'+(OPEN.next.getDate())+' 起會開放下一季的日期';return;}
+    var n=state.inD&&state.outD?diff(state.inD,state.outD):0;
+    if(n&&dt>=state.inD&&dt<state.outD){                     /* 點已選的晚上：取消那一晚 */
+      if(n===1){state.inD=null;state.outD=null;H.textContent='已取消，請點選要入住的晚上';update();return;}
+      if(same(dt,state.inD))state.inD=add(state.inD,1);else state.outD=add(state.outD,-1);
+      H.textContent='改成住 '+md(state.inD)+' 一晚。要住兩晚，再點隔天';update();return;
     }
-    if(full){$('hint').textContent=md(dt)+'這晚已經有客人了，請選其他日期';return;}
-    state.inD=dt;state.outD=null;$('hint').textContent='請點退房日（隔天或後天）';update();
+    if(isFull(key(dt))){H.textContent=md(dt)+'這晚已經有客人了，請選其他日期';return;}
+    if(n===1&&same(dt,state.outD)){state.outD=add(dt,1);H.textContent='住 2 晚：'+md(state.inD)+'、'+md(dt)+'。想改的話，點已選的晚上可以取消';update();return;}
+    if(n===1&&same(dt,add(state.inD,-1))){state.inD=dt;H.textContent='住 2 晚：'+md(dt)+'、'+md(add(dt,1))+'。想改的話，點已選的晚上可以取消';update();return;}
+    var long=n===MAXN&&(same(dt,state.outD)||same(dt,add(state.inD,-1)));
+    state.inD=dt;state.outD=add(dt,1);
+    H.textContent=(long?'網路預約最多 2 晚，更長的住宿請私訊主人。已改成 ':'已選 ')+md(dt)+' 一晚'+(okNight(add(dt,1))?'。要住兩晚，再點隔天':'（隔天已滿或未開放，只能住一晚）');
+    update();
   }
   function nights(){if(!state.inD||!state.outD)return[];var r=[];for(var d=new Date(state.inD);d<state.outD;d=add(d,1))r.push(new Date(d));return r;}
   function calc(){var ns=nights(),sub=0;ns.forEach(function(d){sub+=nightPrice(d);});var disc=ns.length>=2?DISCOUNT:0,total=sub-disc,dep=DEPOSIT*ns.length;return{ns:ns,disc:disc,total:total,dep:dep,rest:total-dep};}
